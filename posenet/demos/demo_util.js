@@ -19,7 +19,8 @@ import * as tf from '@tensorflow/tfjs';
 
 const color = 'aqua';
 const boundingBoxColor = 'red';
-const lineWidth = 2;
+const lineWidth = 3;
+const lineColor = 'white'
 
 export const tryResNetButtonName = 'tryResNetButton';
 export const tryResNetButtonText = '[New] Try ResNet50';
@@ -90,7 +91,7 @@ export function drawSegment([ay, ax], [by, bx], color, scale, ctx) {
   ctx.moveTo(ax * scale, ay * scale);
   ctx.lineTo(bx * scale, by * scale);
   ctx.lineWidth = lineWidth;
-  ctx.strokeStyle = color;
+  ctx.strokeStyle = lineColor;
   ctx.stroke();
 }
 
@@ -100,7 +101,9 @@ export function drawSegment([ay, ax], [by, bx], color, scale, ctx) {
 export function drawSkeleton(keypoints, minConfidence, ctx, scale = 1) {
   const adjacentKeyPoints =
       posenet.getAdjacentKeyPoints(keypoints, minConfidence);
-
+  
+  // console.log('Adjacents:', adjacentKeyPoints);
+  getLeftArmAngle(adjacentKeyPoints);
   adjacentKeyPoints.forEach((keypoints) => {
     drawSegment(
         toTuple(keypoints[0].position), toTuple(keypoints[1].position), color,
@@ -228,4 +231,26 @@ export function drawOffsetVectors(
     drawSegment(
         [heatmapY, heatmapX], [offsetPointY, offsetPointX], color, scale, ctx);
   }
+}
+
+export const getLeftArmAngle = (adjacentKeyPoints) => {
+  if(adjacentKeyPoints.length> 0){
+    const leftElbowShoulder = adjacentKeyPoints.find(element => {
+      return element[0].part == "leftElbow" && element[1].part == "leftShoulder";
+    });
+    const leftHipShoulder = adjacentKeyPoints.find(element => {
+      return element[0].part == "leftHip" && element[1].part == "leftShoulder";
+    });
+    if(leftHipShoulder && leftElbowShoulder){
+      const angle = find_angle(leftElbowShoulder[0].position, leftElbowShoulder[1].position, leftHipShoulder[0].position);
+      console.log('Arm:', leftElbowShoulder, 'Waist:', leftHipShoulder, 'Angle:', angle);
+    }
+  }
+};
+
+function find_angle(A,B,C) {
+  var AB = Math.sqrt(Math.pow(B.x-A.x,2)+ Math.pow(B.y-A.y,2));    
+  var BC = Math.sqrt(Math.pow(B.x-C.x,2)+ Math.pow(B.y-C.y,2)); 
+  var AC = Math.sqrt(Math.pow(C.x-A.x,2)+ Math.pow(C.y-A.y,2));
+  return Math.acos((BC*BC+AB*AB-AC*AC)/(2*BC*AB))*180/Math.PI;
 }
